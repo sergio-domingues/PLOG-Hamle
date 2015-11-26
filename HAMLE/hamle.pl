@@ -9,6 +9,8 @@
 
 :-use_module(library(lists)).
 :-use_module(library(clpfd)).
+:- use_module(library(aggregate)).
+:- use_module(library(between)).
 %1º passo
 %-> resolver
 
@@ -33,7 +35,7 @@
 hamle_solver(TabIni, TabSol, Tamanho):-  
         %        
         % gera tab solucao com vars n/instanciadas
-        generate_list(TabSol,Tamanho), 
+        generate_tab(TabSol,Tamanho), 
         %
         %lista de pecas do tab
         get_pieces_list(TabIni,PList),
@@ -50,12 +52,12 @@ hamle_solver(TabIni, TabSol, Tamanho):-
         %[1,4]: Num of directions
         domain(DirList,1,4),
         %
-        %restrict_dirs(TabIni,TabSol,DirList,PList,PosList,NumPecas),
+        restrict_dirs(TabIni,TabSol,DirList,PList,PosList,Tamanho),
         
         
         %
         labeling([],DirList),
-        do_labelling([],TabSol),       
+        do_labeling(TabSol),       
         write(TabSol).                           
 
 
@@ -65,16 +67,75 @@ hamle_solver(TabIni, TabSol, Tamanho):-
 
 
 %%%%%%%%%%%%%
+restrict_dirs([],[],_).
+restrict_dirs(Tab,Tsol,[Hdir|Tdir],[Hpeca|Tpeca],[Hpos|Tpos], TabSize):-
+        %restringe dirs e obtem novas coos
+        get_coos_dir(Hpos,Hpeca,Hdir,NewX,NewY),
+        % posicao tem de estar livre  
+        restrict_position(Tab,NewX,NewY,Hpeca),
+        %               
+        inside_bounds(NewX,NewY,TabSize), 
+        % posicoes adjacentes têm de estar livres
+        adjoins_free(Tsol,NewX,NewY),
+        %
+        restrict_dirs(Tab,Tsol,Tdir,Tpeca,Tpos,TabSize).       
 
-/*restrict_dirs([],[],_).
-restrict_dirs([Htab|Ttab],[HSol,TSol],[Hdir|Tdir],[Hpeca|Tpeca],[Hpos|Tpos], Length):-
-        Norte = 1, Sul = 2, Este = 3, Oeste = 4,
-        nth1(1,Hpos,X),
-        nth1(2,Hpos,Y),*/
+                
+adjoins_free(Tab,X,Y):-
+        foreach(between(1,4,Dir), check_adjoin_dir(Tab,X,Y,Dir)).
+
+                
+check_adjoin_dir(Tab,X,Y,1):-
+        (outside_bounds(Tab,X,Y-1);
+        restrict_position(Tab,X,Y-1,0)),!.           
+
+check_adjoin_dir(Tab,X,Y,2):-
+        (outside_bounds(Tab,X,Y+1);
+        restrict_position(Tab,X,Y+1,0)),!.
+
+check_adjoin_dir(Tab,X,Y,3):-
+        (outside_bounds(Tab,X+1,Y);
+        restrict_position(Tab,X+1,Y,0)),!.
+
+check_adjoin_dir(Tab,X,Y,4):-
+        (outside_bounds(Tab,X-1,Y);
+        restrict_position(Tab,X-1,Y,0)),!.       
+
+%%%%
+restrict_position(Tab,X,Y,Val):-
+        element(X, Tab, Linha),
+        element(Y, Linha, V),
+        V #= Val.        
+                
+outside_bounds(X,Y,TabSize):-
+       ( X < 1 ;  X > TabSize;
+       Y < 1 ; Y > TabSize), !.        
+                
+inside_bounds(X,Y,TabSize):-
+       ( X > 0 ;  X =< TabSize;
+       Y > 0 ; Y =< TabSize), !.
         
+%1-norte,2-sul,3-este,4 oeste.        
+get_coos_dir([X,Y],ValPeca,Dir,NewX,NewY):-
+        Dir #= 1,
+        NewX is X,
+        NewY is Y - ValPeca.               
+                
+get_coos_dir([X,Y],ValPeca,Dir,NewX,NewY):-
+        Dir #= 2,
+        NewX is X,
+        NewY is Y + ValPeca. 
         
+get_coos_dir([X,Y],ValPeca,Dir,NewX,NewY):-
+        Dir #= 3,
+        NewX is X + ValPeca,
+        NewY is Y. 
         
-%fazer resto dos casos hdir = 2, 3, 4..        
+get_coos_dir([X,Y],ValPeca,Dir,NewX,NewY):-
+        Dir #= 4,
+        NewX is X - ValPeca,
+        NewY is Y.                         
+       
         
 %obter lista de posicoes 
 get_pieces_pos_list(_,[],[]).         
@@ -96,14 +157,24 @@ get_pieces_pos_list_aux([H|T],Linha,Y,List):-
 get_pieces_pos_list_aux([_|T],L,Y,List):-  
         get_pieces_pos_list_aux(T,L,Y,List). 
 %%%%%%%%%%%%%%%%%%%%%%%        
+
+fill_tab([],_).
+fill_tab([H|T],Val):-
+       fill_list(H,Val),
+       fill_tab(T,Val). 
+
+fill_list([],_).
+fill_list([H|T],Val):-
+      H is Val,
+      fill_list(T,Val).  
                 
 matrix_get(Tab,X,Y,V):- nth1(Y,Tab,Linha),nth1(X,Linha,V).                                                                                     
 
 %gera matriz tamanho Size x Size
-generate_list([],[]).
-generate_list([H|L],Size):-
+generate_tab([],[]).
+generate_tab([H|L],Size):-
         length(H,Size),
-        generate_list(L,Size).
+        generate_tab(L,Size).
 
 %%%%%%%%%%%%%
 get_pieces_list([],[]).
@@ -141,6 +212,3 @@ do_labeling([]).
 do_labeling([H|T]):-
         labeling([],H),
         do_labeling(T).
-%=====================================
-
-
