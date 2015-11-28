@@ -33,18 +33,18 @@
 %3) Celulas vazias estao interconectadas   [TODO]
 %4) celulas nao podem sobrepor-se
 hamle_solver(TabIni, TabSol, Tamanho):-  
-        %        
+        %      
         % gera tab solucao com vars n/instanciadas
-        generate_tab(TabSol,Tamanho), 
+        generate_tab(TabSol,Tamanho,Tamanho), 
         %
         %lista de pecas do tab
         get_pieces_list(TabIni,PList),
         %
         %lista de posicoes de pecas no tab
-        get_pieces_pos_list(TabIni,TabIni, PosList),
+        get_pieces_pos_list(TabIni,1, PosList),
         %
         %numero de pecas no tab
-        length(PList, NumPecas),       
+        length(PList, NumPecas),
         %
         %generate list of directions for pieces with length = numPecas
         length(DirList,NumPecas),        
@@ -52,14 +52,10 @@ hamle_solver(TabIni, TabSol, Tamanho):-
         %[1,4]: Num of directions
         domain(DirList,1,4),
         %
-        restrict_dirs(TabIni,TabSol,DirList,PList,PosList,Tamanho),
-        
-        
+        restrict_dirs(TabIni,TabSol,DirList,PList,PosList,Tamanho), 
         %
-        labeling([],DirList),
-        do_labeling(TabSol),       
+        labeling([],DirList),       
         write(TabSol).                           
-
 
 
 %2º passo 
@@ -67,53 +63,59 @@ hamle_solver(TabIni, TabSol, Tamanho):-
 
 
 %%%%%%%%%%%%%
-restrict_dirs([],[],_).
+restrict_dirs(_,_,[],[],[],_).
 restrict_dirs(Tab,Tsol,[Hdir|Tdir],[Hpeca|Tpeca],[Hpos|Tpos], TabSize):-
         %restringe dirs e obtem novas coos
-        get_coos_dir(Hpos,Hpeca,Hdir,NewX,NewY),
-        % posicao tem de estar livre  
-        restrict_position(Tab,NewX,NewY,Hpeca),
+        get_coos_dir(Hpos,Hpeca,Hdir,NewX,NewY),     
         %               
-        inside_bounds(NewX,NewY,TabSize), 
-        % posicoes adjacentes têm de estar livres
-        adjoins_free(Tsol,NewX,NewY),
+        inside_bounds(NewX,NewY,TabSize),
         %
-        restrict_dirs(Tab,Tsol,Tdir,Tpeca,Tpos,TabSize).       
+        % posicao tem de estar livre  
+        restrict_position(Tsol,NewX,NewY,Hpeca),
+        %         
+        % posicoes adjacentes têm de estar livres
+        adjoins_free(Tsol,TabSize,NewX,NewY),
+        %        
+        restrict_dirs(Tab,Tsol,Tdir,Tpeca,Tpos,TabSize).
 
                 
-adjoins_free(Tab,X,Y):-
-        foreach(between(1,4,Dir), check_adjoin_dir(Tab,X,Y,Dir)).
+adjoins_free(Tab,TabSize,X,Y):-
+        foreach(between(1,4,Dir), check_adjoin_dir(Tab,TabSize,X,Y,Dir)).
 
                 
-check_adjoin_dir(Tab,X,Y,1):-
-        (outside_bounds(Tab,X,Y-1);
-        restrict_position(Tab,X,Y-1,0)),!.           
+check_adjoin_dir(Tab,TabSize,X,Y,1):-
+        NewY is Y-1,
+        (outside_bounds(X,NewY,TabSize);
+        restrict_position(Tab,X,NewY,0),!).           
 
-check_adjoin_dir(Tab,X,Y,2):-
-        (outside_bounds(Tab,X,Y+1);
-        restrict_position(Tab,X,Y+1,0)),!.
+check_adjoin_dir(Tab,TabSize, X,Y,2):-
+        NewY is Y+1,
+        (outside_bounds(X,NewY,TabSize);
+        restrict_position(Tab,X,NewY,0),!).
 
-check_adjoin_dir(Tab,X,Y,3):-
-        (outside_bounds(Tab,X+1,Y);
-        restrict_position(Tab,X+1,Y,0)),!.
+check_adjoin_dir(Tab,TabSize,X,Y,3):-
+        NewX is X+1,
+        (outside_bounds(NewX,Y,TabSize);        
+        restrict_position(Tab,NewX,Y,0),!).
 
-check_adjoin_dir(Tab,X,Y,4):-
-        (outside_bounds(Tab,X-1,Y);
-        restrict_position(Tab,X-1,Y,0)),!.       
+check_adjoin_dir(Tab,TabSize,X,Y,4):-
+        NewX is X-1,
+        (outside_bounds(NewX,Y,TabSize);
+        restrict_position(Tab,NewX,Y,0),!).       
 
 %%%%
 restrict_position(Tab,X,Y,Val):-
-        element(X, Tab, Linha),
-        element(Y, Linha, V),
+        nth1(Y, Tab, Linha),
+        nth1(X, Linha, V),
         V #= Val.        
                 
 outside_bounds(X,Y,TabSize):-
-       ( X < 1 ;  X > TabSize;
-       Y < 1 ; Y > TabSize), !.        
+       X < 1 ;  X > TabSize;
+       Y < 1 ; Y > TabSize.        
                 
 inside_bounds(X,Y,TabSize):-
-       ( X > 0 ;  X =< TabSize;
-       Y > 0 ; Y =< TabSize), !.
+       X > 0 ,  X =< TabSize,
+       Y > 0 , Y =< TabSize.
         
 %1-norte,2-sul,3-este,4 oeste.        
 get_coos_dir([X,Y],ValPeca,Dir,NewX,NewY):-
@@ -136,27 +138,17 @@ get_coos_dir([X,Y],ValPeca,Dir,NewX,NewY):-
         NewX is X - ValPeca,
         NewY is Y.                         
        
-        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
 %obter lista de posicoes 
-get_pieces_pos_list(_,[],[]).         
-get_pieces_pos_list(Tab,[Htab|Ttab],List):-
-       nth1(Y,Tab,Htab),
-       get_pieces_pos_list_aux(Htab,Htab,Y, List1),
-       get_pieces_pos_list(Tab,Ttab,NewList),
+get_pieces_pos_list([],_,[]).         
+get_pieces_pos_list([Htab|Ttab],Y,List):- 
+       NewY is Y + 1,      
+       get_pieces_pos_list(Ttab,NewY,NewList),
+       findall([X,Y],(nth1(X,Htab, V),V > 0),List1),
        append(List1,NewList,List).
-      
-get_pieces_pos_list_aux([],_,_,[]).       
-get_pieces_pos_list_aux([H|T],Linha,Y,List):-                     
-        H > 0,
-        !,       
-        get_pieces_pos_list_aux(T,Linha,Y,List1), 
-        nth1(X1,Linha,H),
-        append([X1],[Y], Pos),
-        append([Pos],List1,List). 
 
-get_pieces_pos_list_aux([_|T],L,Y,List):-  
-        get_pieces_pos_list_aux(T,L,Y,List). 
-%%%%%%%%%%%%%%%%%%%%%%%        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 fill_tab([],_).
 fill_tab([H|T],Val):-
@@ -171,10 +163,11 @@ fill_list([H|T],Val):-
 matrix_get(Tab,X,Y,V):- nth1(Y,Tab,Linha),nth1(X,Linha,V).                                                                                     
 
 %gera matriz tamanho Size x Size
-generate_tab([],[]).
-generate_tab([H|L],Size):-
+generate_tab([],_,0).
+generate_tab([H|L],Size,Counter):-
         length(H,Size),
-        generate_tab(L,Size).
+        NextC is Counter -1,
+        generate_tab(L,Size,NextC).
 
 %%%%%%%%%%%%%
 get_pieces_list([],[]).
