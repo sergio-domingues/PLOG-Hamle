@@ -35,7 +35,7 @@
 hamle_solver(TabIni, TabSol, Tamanho):-  
         %      
         % gera tab solucao com vars n/instanciadas
-        generate_tab(TabSol,Tamanho,Tamanho), 
+        generate_tab(TabSol,Tamanho,Tamanho), !,
         %
         %lista de pecas do tab
         get_pieces_list(TabIni,PList),
