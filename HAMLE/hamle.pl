@@ -14,24 +14,14 @@
 %1º passo
 %-> resolver
 
-%verificar células brancas interconectadas 
-%começar na primeira branca, ir guardando velulas visitadas e tentar visitar todas as celulas brancas adjacente
-%se no finaol o numero de celulas visitadas for !=  do numero de cels bracnas é pq nao existe
+main(TabIni,Tamanho):-
+        write('Tabuleiro problema:'),nl,
+        print_tab(TabIni,Tamanho),             
+        hamle_solver(TabIni, TabSol,Tamanho),
+        write('Tabuleiro solução:'),nl,
+        print_tab(TabSol,Tamanho).  
 
-%verificar celulas pretas nao adjacentes
-%-basicamente é aplicar o mesmo predicado que nas celulas brancas
-%-mas verificar se o numero de celulas pretas interconectadas é 0
 
-%recebe lista de cell_index e retorna lista de cell_index solucao
-
-%tamanho maximo = 10
-%index = linha[1,x]*10 + coluna
-%==restricoes
-
-%1) Todas as pecas têm de ser movidas
-%2) Não pode haver peças adjacentes        [TODO]
-%3) Celulas vazias estao interconectadas   [TODO]
-%4) celulas nao podem sobrepor-se
 hamle_solver(TabIni, TabSol, Tamanho):-  
         %      
         % gera tab solucao com vars n/instanciadas
@@ -54,13 +44,36 @@ hamle_solver(TabIni, TabSol, Tamanho):-
         %
         restrict_dirs(TabIni,TabSol,DirList,PList,PosList,Tamanho), 
         %
-        labeling([],DirList),       
-        write(TabSol).                           
-
+        labeling([],DirList),
+        !.   % nao da mais solucoes
+                                 
 
 %2º passo 
 %gerar tabuleiro
 
+%%%%%%%%%%
+print_tab([],_).%:- print_char_n_times('_', Size).
+print_tab([H|T],Size):-
+        print_tab(T,Size),
+       % print_char_n_times('_ ', Size),
+       % nl,
+        print_line(H),        
+        nl.        
+
+print_line([]).
+print_line([H|T]):-
+        mostra(H),
+        write('|'),
+        print_line(T).
+
+print_char_n_times(_,0).        
+print_char_n_times(C,N):-
+        N1 is N-1,
+        write(C),
+        print_char_n_times(C,N1).
+
+mostra(H):-var(H), write('0').
+mostra(H):-write(H).
 
 %%%%%%%%%%%%%
 restrict_dirs(_,_,[],[],[],_).
