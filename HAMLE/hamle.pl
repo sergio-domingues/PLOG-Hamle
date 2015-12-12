@@ -20,10 +20,12 @@ main(T,Tamanho):-
         %generate_tab(T,Tamanho,Tamanho),
         %problem_generator(T,Tamanho),
         write('Tabuleiro problema:'),nl,
-        print_tab(T,Tamanho),           
+        print_num_helper(1,Tamanho),
+        print_tab(T,Tamanho,1),           
         hamle_solver(T,Tamanho,TSol),
         write('Tabuleiro solução:'),nl,
-        print_tab(TSol,Tamanho).
+        print_num_helper(1,Tamanho),
+        print_tab(TSol,Tamanho,1).
 
 %%talvez imprimir isto entre trabuleiro problema e tabuleiro solução          
 %%FAZER DISPLAY DAS DUAS LISTAS : PecasPOsINicial e PecasPOsFinal a fim de evidenciar "movimentos" realizados pelas pecas
@@ -252,11 +254,27 @@ get_pieces_list_aux([_|T],L):-
         get_pieces_list_aux(T,L).
 %%%%%%%%%%%%%
 
-print_tab([],_).%:- print_char_n_times('_', Size).
-print_tab([H|T],Size):-        
+print_tab([],_,_).%:- print_char_n_times('_', Size).
+print_tab([H|T],Size,V):-        
+        write(V),write('> '),
         print_line(H),        
         nl,
-        print_tab(T,Size).
+        NewV is V+1,
+        print_tab(T,Size,NewV).
+
+print_num_helper(N,N):-nl.
+print_num_helper(1,Size):-
+        write('   '),
+        write(1),
+        write(' '),
+        UpdSize is Size+1,
+        print_num_helper(2,UpdSize).
+
+print_num_helper(Inc,Size):-
+        write(Inc),
+        write(' '),
+        NewInc is Inc+1,
+        print_num_helper(NewInc,Size).
 
 print_line([]).
 print_line([H|T]):-
