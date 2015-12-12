@@ -7,22 +7,102 @@
 
 %usar predicado length para gerar lista de variaveis n/inicializadas ?
 
-:-use_module(library(lists)).
-:-use_module(library(clpfd)).
+:- use_module(library(lists)).
+:- use_module(library(clpfd)).
 :- use_module(library(aggregate)).
 :- use_module(library(between)).
+:- use_module(library(random)).
+
 %1º passo
 %-> resolver
 
-main(TabIni,Tamanho):-
+main(T,Tamanho):-
+        %generate_tab(T,Tamanho,Tamanho),
+        %problem_generator(T,Tamanho),
         write('Tabuleiro problema:'),nl,
-        write('Predicado Printtab está errado'), 
-        print_tab(TabIni,Tamanho),             
-        hamle_solver(TabIni, TabSol,Tamanho),
+        print_tab(T,Tamanho),           
+        hamle_solver(T,Tamanho,TSol),
         write('Tabuleiro solução:'),nl,
-        print_tab(TabSol,Tamanho).  
+        print_tab(TSol,Tamanho).
 
-hamle_solver(TabIni, Tamanho, Pieces):-
+%%talvez imprimir isto entre trabuleiro problema e tabuleiro solução          
+%%FAZER DISPLAY DAS DUAS LISTAS : PecasPOsINicial e PecasPOsFinal a fim de evidenciar "movimentos" realizados pelas pecas
+
+%%%chamar isto dentro do hamle solver
+convert_to_tab_sol(PosList,PiecesList,BoardSize,TSol):-
+        generate_tab(TSol,BoardSize,BoardSize),
+        fill_vars_tab(PosList,PiecesList,TSol,BoardSize).       
+
+fill_vars_tab([],[],_,_).
+fill_vars_tab([[X,Y]|T],[PH|PT],TSol,BoardSize):-
+        fill_vars_tab(T,PT,TSol,BoardSize),
+        nth1(Y,TSol,Linha),
+        nth1(X,Linha, PH).      %atribui valor da peça
+
+convert_index_to_pos([],_,[]).
+convert_index_to_pos([H|T], BoardSize, List):-
+        convert_index_to_pos(T,BoardSize,NewList),
+        index_to_coo(H,BoardSize,Coo),
+        append([Coo],NewList,List).
+       
+index_to_coo(I,BoardSize,[X,Y]):-
+        Y is ceiling(I/BoardSize),
+        Temp is mod(I,BoardSize),
+        Temp is 0,
+        X is BoardSize.         %converte indice em coo's X,Y  
+
+index_to_coo(I,BoardSize,[X,Y]):-
+        Y is ceiling(I/BoardSize),
+        X is mod(I,BoardSize).                %converte indice em coo's X,Y
+               
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%heuristica de geracao de problema dinamico%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+problem_generator(TabProb,Size):-
+        Upper is 2*Size +1,       
+        random(Size,Upper,NumPieces),!,  %num de pecas do tabuleiro problema  
+        write('numPieces:'),
+        write(NumPieces),nl,                                   
+        fill_tab_random(TabProb,Size,NumPieces,0),!,
+        fill_blanks(TabProb),
+        !.
+        
+fill_tab_random(_,_,Num,Num).
+fill_tab_random(Tab,Size,NumPieces,Val):-
+        random(1,Size,Y),
+        random(1,Size,X),
+        nth1(Y,Tab,Line),
+        nth1(X,Line,Value),
+        (var(Value), %verifica se nao tem já valor atribuido
+        get_upper_bound(X,Size,Upper),
+        random(1,Upper,Value),  %atribui valor a peça
+        NewVal is Val +1 ,        
+        fill_tab_random(Tab,Size,NumPieces,NewVal));
+        fill_tab_random(Tab,Size,NumPieces,Val).
+
+
+get_upper_bound(X,Size,Upper):-
+        X >= Size/2,
+        Upper is X-1.
+        
+get_upper_bound(X,Size,Upper):-
+        X < Size/2,
+        Upper is Size-X.
+
+fill_blanks([]).
+fill_blanks([H|T]):-
+        fill_blanks(T),
+        fill_blanks_aux(H).
+
+fill_blanks_aux([]).
+fill_blanks_aux([H|T]):-        
+        (var(H),
+        H is 0, 
+        fill_blanks_aux(T));
+        fill_blanks_aux(T).              
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+hamle_solver(TabIni, Tamanho, Tsol):-
         %lista tabuleiro
         get_pieces_pos_list(TabIni,1,PosList),
         %
@@ -46,10 +126,26 @@ hamle_solver(TabIni, Tamanho, Pieces):-
         %
         all_different(Pieces),
         %
-        labeling([],Pieces),
-        write(Pieces).
+        labeling([],Pieces),!, 
+        convert_index_to_pos(Pieces,Tamanho,PosSolList),        
+        print_movimentos2(PosList, PosSolList,1), 
+        convert_to_tab_sol(PosSolList,Plist,Tamanho,Tsol).
 
-%criar no final forma de ver qual peca se moveu para tal sitio par anao haver confusoes de valores de pecas
+print_movimentos(PosList, PosSolList):-
+        write('Posicao inicial das peças (por ordem crescente de índices): '), nl,
+        print_line(PosList),
+        write('Posicao final das peças (por ordem crescente de índices): '), nl,
+        print_line(PosSolList).
+
+print_movimentos2([],[],_).
+print_movimentos2([H1|T1],[H2|T2], I):-             
+        write('Peça #'),write(I),write('  '),write(H1), 
+        write(' moveu-se para: '), write(H2),nl,
+        NewI is I+1,
+        print_movimentos2(T1,T2,NewI).
+        
+
+%criar no final forma de ver qual peca se moveu para tal sitio para dnao haver confusoes de valores de pecas
 %usar a posicao inicial vs posiciao final
 
 restrict_adjoins([],_).
@@ -129,14 +225,13 @@ get_pieces_pos_list([Htab|Ttab],Y,List):-
        append(List1,NewList,List).
 
 
-
 matrix_get(Tab,X,Y,V):- nth1(Y,Tab,Linha),nth1(X,Linha,V).                                                                                     
 
 %gera matriz tamanho Size x Size
 generate_tab([],_,0).
 generate_tab([H|L],Size,Counter):-
         length(H,Size),
-        NextC is Counter -1,
+        NextC is Counter - 1,
         generate_tab(L,Size,NextC).
 
 %%%%%%%%%%%%%
@@ -158,10 +253,10 @@ get_pieces_list_aux([_|T],L):-
 %%%%%%%%%%%%%
 
 print_tab([],_).%:- print_char_n_times('_', Size).
-print_tab([H|T],Size):-
-        print_tab(T,Size),
+print_tab([H|T],Size):-        
         print_line(H),        
-        nl.        
+        nl,
+        print_tab(T,Size).
 
 print_line([]).
 print_line([H|T]):-
@@ -175,5 +270,6 @@ print_char_n_times(C,N):-
         write(C),
         print_char_n_times(C,N1).
 
-mostra(H):-var(H), write('0').
+mostra(0):-write(.).
+mostra(H):-var(H), write('.').
 mostra(H):-write(H).
