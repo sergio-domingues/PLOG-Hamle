@@ -16,16 +16,14 @@
 %1º passo
 %-> resolver
 
-main(T,Tamanho):-
-        %generate_tab(T,Tamanho,Tamanho),
-        %problem_generator(T,Tamanho),
+main(Tamanho,TSol):-
+        generate_tab(T,Tamanho,Tamanho),     
+        problem_generator(T,Tamanho),
         write('Tabuleiro problema:'),nl,
         print_num_helper(1,Tamanho),
-        print_tab(T,Tamanho,1),           
-        hamle_solver(T,Tamanho,TSol),
-        write('Tabuleiro solução:'),nl,
-        print_num_helper(1,Tamanho),
-        print_tab(TSol,Tamanho,1).
+        print_tab(T,Tamanho,1),!,          
+        hamle_solver(T,Tamanho,TSol),!.
+        
 
 %%talvez imprimir isto entre trabuleiro problema e tabuleiro solução          
 %%FAZER DISPLAY DAS DUAS LISTAS : PecasPOsINicial e PecasPOsFinal a fim de evidenciar "movimentos" realizados pelas pecas
@@ -62,9 +60,7 @@ index_to_coo(I,BoardSize,[X,Y]):-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 problem_generator(TabProb,Size):-
         Upper is 2*Size +1,       
-        random(Size,Upper,NumPieces),!,  %num de pecas do tabuleiro problema  
-        write('numPieces:'),
-        write(NumPieces),nl,                                   
+        random(Size,Upper,NumPieces),!,  %num de pecas do tabuleiro problema                                  
         fill_tab_random(TabProb,Size,NumPieces,0),!,
         fill_blanks(TabProb),
         !.
@@ -127,11 +123,16 @@ hamle_solver(TabIni, Tamanho, Tsol):-
         restrict_adjoins(Pieces,Tamanho),
         %
         all_different(Pieces),
-        %
-        labeling([],Pieces),!, 
-        convert_index_to_pos(Pieces,Tamanho,PosSolList),        
+        %       
+        labeling([],Pieces),         
+        convert_index_to_pos(Pieces,Tamanho,PosSolList),      
         print_movimentos2(PosList, PosSolList,1), 
-        convert_to_tab_sol(PosSolList,Plist,Tamanho,Tsol).
+        convert_to_tab_sol(PosSolList,Plist,Tamanho,Tsol),
+        write('Tabuleiro solução:'),nl,
+        print_num_helper(1,Tamanho),
+        print_tab(Tsol,Tamanho,1),!.
+
+hamle_solver(_,Tamanho,Tsol):- write('cenas'),nl,!,main(Tamanho,Tsol).
 
 print_movimentos(PosList, PosSolList):-
         write('Posicao inicial das peças (por ordem crescente de índices): '), nl,
