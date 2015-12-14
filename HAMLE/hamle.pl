@@ -16,6 +16,12 @@
 %1º passo
 %-> resolver
 
+main_2(Tamanho,Tprob,Tsol):-
+        write('Tabuleiro problema:'),nl,
+        print_num_helper(1,Tamanho),
+        print_tab(Tprob,Tamanho,1),!,          
+        hamle_solver(Tprob,Tamanho,Tsol),!.
+
 main(Tamanho,TSol):-
         generate_tab(T,Tamanho,Tamanho),     
         problem_generator(T,Tamanho),
@@ -107,7 +113,7 @@ hamle_solver(TabIni, Tamanho, Tsol):-
         convert_to_index_list(PosList,Tamanho,IndexList),   
         %retorna lista de pecas
         get_pieces_list(TabIni,Plist),            
-        %devolve lista de listas com indices das posicoes possiveis para cada peca
+        %devolve lista de listas com posicoes possiveis para cada peca
         get_list_of_domains(PosList,Plist,Tamanho,DomainList),
         %
         %devolve lista de listas de indices para tabling
@@ -123,8 +129,12 @@ hamle_solver(TabIni, Tamanho, Tsol):-
         restrict_adjoins(Pieces,Tamanho),
         %
         all_different(Pieces),
-        %       
-        labeling([],Pieces),         
+        %
+        %reset_timer,       
+        labeling([ffc],Pieces),
+        %labeling([],Pieces), 
+       % print_time,
+        %fd_statistics,        
         convert_index_to_pos(Pieces,Tamanho,PosSolList),      
         print_movimentos2(PosList, PosSolList,1), 
         convert_to_tab_sol(PosSolList,Plist,Tamanho,Tsol),
@@ -292,3 +302,11 @@ print_char_n_times(C,N):-
 mostra(0):-write(.).
 mostra(H):-var(H), write('.').
 mostra(H):-write(H).
+
+%%%%%%%%%%%%%%%%%%%%%%%
+
+reset_timer :- statistics(walltime,_).  
+print_time :-
+        statistics(walltime,[_,T]),
+        TS is ((T//10)*10)/1000,
+        nl, write('Time: '), write(TS), write('s'), nl, nl.
